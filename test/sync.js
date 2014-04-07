@@ -1,7 +1,20 @@
 (function() {
 
   var Library = Backbone.Collection.extend({
-    url : function() { return '/library'; }
+    url : function(options) {
+      var query = (options &&
+                   ((options.list_down_from_latest && '?date=latest&sort=desc') ||
+                    (options.list_down_from_date && ('?date=' +
+                                                 options.list_down_from_date + '&sort=desc')) ||
+                    (options.list_up_from_oldest && '?date=oldest&sort=asc') ||
+                    (options.list_up_from_date && ('?date=' +
+                                                 options.list_up_from_date + '&sort=asc'))) || "");
+      if (query && (!options || !options.no_limit)) {
+          query += '&limit=30';
+      }
+
+      return '/library' + query;
+    }
   });
   var library;
 
@@ -37,6 +50,25 @@
     equal(this.ajaxSettings.url, '/library');
     equal(this.ajaxSettings.data.a, 'a');
     equal(this.ajaxSettings.data.one, 1);
+  });
+
+  test("proxying options object to the method 'url(...)'", 5, function() {
+    library.fetch({options: {list_down_from_latest: true}});
+    equal(this.ajaxSettings.url, '/library?date=latest&sort=desc&limit=30');
+
+    library.fetch({options: {list_up_from_oldest: true}});
+    equal(this.ajaxSettings.url, '/library?date=oldest&sort=asc&limit=30');
+
+    var date = 'some_date';
+
+    library.fetch({options: {list_down_from_date: date}});
+    equal(this.ajaxSettings.url, '/library?date=' + date + '&sort=desc&limit=30');
+
+    library.fetch({options: {list_up_from_date: date}});
+    equal(this.ajaxSettings.url, '/library?date=' + date + '&sort=asc&limit=30');
+
+    library.fetch({options: {list_up_from_date: date, no_limit: true}});
+    equal(this.ajaxSettings.url, '/library?date=' + date + '&sort=asc');
   });
 
   test("create", 6, function() {
